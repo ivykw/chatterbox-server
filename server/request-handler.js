@@ -74,15 +74,19 @@ var defaultCorsHeaders = {
 //   { username: 'Test', roomname: 'Lobby', text: 'Test test'},
 //   { username: 'Test', roomname: 'Lobby', text: 'Test test'},
 // ];
-
+var array = [];
 var requestHandler = function(request, response) {
   console.log('Serving request type ' + request.method + ' for url ' + request.url);
-  var array = [];
+
   var statusCode = 200;
   var headers = defaultCorsHeaders;
   headers['Content-Type'] = 'application/json';
   if (request.url !== '/classes/messages') {
     statusCode = 404;
+  }
+  if (request.method === 'GET' || request.method === 'OPTIONS') {
+    response.writeHead(statusCode, headers);
+    response.end(JSON.stringify(array));
   }
   if (request.method === 'POST') {
     statusCode = 201;
@@ -91,18 +95,20 @@ var requestHandler = function(request, response) {
       body.push(chunk);
     }).on('end', () => {
       body = Buffer.concat(body).toString();
-      array.push(body);
-      array = JSON.stringify(array);
-      console.log(array);
-      response.writeHead(201, headers);
-      response.end(array);
+      body = JSON.parse(body);
+      if (body.text.length === 0) {
+        response.writeHead(400, headers);
+        response.end('<h1>Please input message</h1>');
+      } else {
+        array.unshift(body);
+        response.writeHead(201, headers);
+        response.end(JSON.stringify(array));
+      }
     });
 
   }
-  // response.writeHead(statusCode, headers);
-  // response.end(JSON.stringify(array));
 };
 
 
 
-module.exports.handleRequest = requestHandler;
+module.exports.requestHandler = requestHandler;
