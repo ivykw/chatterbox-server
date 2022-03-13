@@ -54,7 +54,7 @@ this file and include it in basic-server.js so that it actually works.
 //
 // Calling .end "flushes" the response's internal buffer, forcing
 // node to actually send all the data over to the client.
-
+const fs = require('fs');
 var defaultCorsHeaders = {
   'access-control-allow-origin': '*',
   'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
@@ -74,7 +74,7 @@ var defaultCorsHeaders = {
 //   { username: 'Test', roomname: 'Lobby', text: 'Test test'},
 //   { username: 'Test', roomname: 'Lobby', text: 'Test test'},
 // ];
-var array = [];
+// var messages = [];
 var requestHandler = function(request, response) {
   console.log('Serving request type ' + request.method + ' for url ' + request.url);
 
@@ -85,8 +85,16 @@ var requestHandler = function(request, response) {
     statusCode = 404;
   }
   if (request.method === 'GET' || request.method === 'OPTIONS') {
-    response.writeHead(statusCode, headers);
-    response.end(JSON.stringify(array));
+    try {
+      var data = fs.readFileSync('server/messageData.txt', 'utf8');
+      JSON.parse(data);
+      data = data.split(/\r?\n/);
+      data.pop();
+      response.writeHead(statusCode, headers);
+      response.end(JSON.stringify(data));
+    } catch (err) {
+      console.error(err);
+    }
   }
   if (request.method === 'POST') {
     statusCode = 201;
@@ -95,15 +103,22 @@ var requestHandler = function(request, response) {
       body.push(chunk);
     }).on('end', () => {
       body = Buffer.concat(body).toString();
+      // console.log(typeof body);
       body = JSON.parse(body);
-      if (body.text.length === 0) {
-        response.writeHead(400, headers);
-        response.end('<h1>Please input message</h1>');
-      } else {
-        array.unshift(body);
-        response.writeHead(201, headers);
-        response.end(JSON.stringify(array));
+      // if (body.text.length === 0) {
+      //   response.writeHead(400, headers);
+      //   response.end();
+      // }
+      // else {
+      try {
+        fs.appendFileSync('server/messageData.txt', JSON.stringify(body) + '\n');
+        console.log('The "data to append" was appended to file!');
+      } catch (err) {
+        console.error(err);
       }
+      response.writeHead(201, headers);
+      response.end();
+      // }
     });
 
   }
@@ -112,3 +127,4 @@ var requestHandler = function(request, response) {
 
 
 module.exports.requestHandler = requestHandler;
+// module.exports.updatedMessages = messages;
